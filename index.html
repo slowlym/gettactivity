@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gettactivity</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .activity {
+            background: #e7f3fe;
+            border-left: 5px solid #2196F3;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            transition: transform 0.2s;
+        }
+        .activity:hover {
+            transform: scale(1.02);
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #777;
+        }
+        .description {
+            font-style: italic;
+            color: #555;
+        }
+        .admin-panel {
+            display: none; /* Oculto por defecto */
+            margin: 20px 0;
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 5px;
+        }
+        .admin-panel input {
+            margin: 5px 0;
+            width: calc(100% - 12px); /* Ajusta el ancho del input */
+            padding: 5px;
+        }
+        /* Estilos para los botones */
+        button {
+            background-color: #4CAF50; /* Color de fondo */
+            color: white; /* Color del texto */
+            border: none; /* Sin borde */
+            padding: 10px 20px; /* Espaciado interno */
+            border-radius: 5px; /* Bordes redondeados */
+            cursor: pointer; /* Cambia el cursor al pasar el mouse */
+            font-size: 16px; /* Tamaño de fuente */
+            transition: background-color 0.3s, transform 0.2s; /* Transiciones suaves */
+            margin: 5px; /* Margen entre botones */
+        }
+        button:hover {
+            background-color: #45a049; /* Color de fondo al pasar el mouse */
+            transform: scale(1.05); /* Aumenta ligeramente el tamaño al pasar el mouse */
+        }
+        .deleteActivityButton {
+            background-color: #f44336; /* Color rojo */
+        }
+        .deleteActivityButton:hover {
+            background-color: #d32f2f; /* Color rojo más oscuro al pasar el mouse */
+        }
+        /* Estilos para el modal */
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .modal-content {
+            margin: 15% auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>ACTIVIDADES ACTUALES</h1>
+    <button id="adminButton">Acceder al Panel de Administración</button>
+    <button id="horarioButton">Ver Horario Actual</button>
+    <button id="profesoresButton">Ver Profesores y Materias</button> <!-- Nuevo botón -->
+</header>
+<div class="container" id="activitiesContainer">
+    <!-- Las actividades se cargarán aquí desde localStorage -->
+</div>
+<div class="container" id="profesoresContainer" style="display: none;">
+    <!-- Los profesores se cargarán aquí -->
+</div>
+<div class="admin-panel" id="adminPanel">
+    <h2>Panel de Administración</h2>
+    <input type="text" id="activityTitle" placeholder="Título de la actividad">
+    <input type="text" id="activityDate" placeholder="Fecha de la actividad">
+    <input type="text" id="activityTime" placeholder="Hora de la actividad">
+    <input type="text" id="activityDescription" placeholder="Descripción de la actividad">
+    <button id="addActivityButton">Agregar Actividad</button>
+    <div id="adminActivitiesContainer"></div>
+</div>
+<footer>
+    <p>&copy; 2024 SLOWLYM, AREA DE INGENIERIA INFORMÁTICA</p>
+</footer>
+<!-- Modal para mostrar el horario -->
+<div id="myModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <img src="horario_actual.png" alt="Horario Actual">
+    </div>
+</div>
+<script>
+    const adminButton = document.getElementById('adminButton');
+    const adminPanel = document.getElementById('adminPanel');
+    const activitiesContainer = document.getElementById('activitiesContainer');
+    const adminActivitiesContainer = document.getElementById('adminActivitiesContainer');
+    const horarioButton = document.getElementById('horarioButton');
+    const profesoresButton = document.getElementById('profesoresButton');
+    const profesoresContainer = document.getElementById('profesoresContainer');
+    const modal = document.getElementById('myModal');
+    const closeModal = document.getElementsByClassName('close')[0];
+    
+    // Contraseña para acceder al panel
+    const password = "admin123"; // Cambia esto por la contraseña que desees
+    
+    // Actividades de ejemplo
+    const exampleActivities = [
+        { title: "Clase de Matemáticas", date: "15 de noviembre 2023", time: "10:00 AM - 12:00 PM", description: "Teoremas fundamentales." },
+        { title: "Seminario de Historia", date: "16 de noviembre 2023", time: "1:00 PM - 3:00 PM", description: "Eventos clave del siglo XX." },
+        { title: "Examen de Química", date: "17 de noviembre 2023", time: "9:00 AM - 11:00 AM", description: "Reacciones químicas." }
+    ];
+
+    // Profesores de ejemplo
+    const profesores = [
+        { nombre: "Diana Silva", materia: "Lenguaje y Comunicación" },
+        { nombre: "Daniel Carpio", materia: "Deporte" },
+        { nombre: "Jhonny Gabazutt", materia: "Economia Digital" },
+        { nombre: "Cleiderman Rodriguez", materia: "Formación Constitucional"},
+        { nombre: "Francis Ron", materia: "Fundamentos de la Informática" },
+        { nombre: "Luis Gonzales", materia: "Ingles I" },
+        { nombre: "Javier Almerida", materia: "Lógica Matemática" }
+     
+    ];
+
+    // Cargar actividades desde localStorage
+    function loadActivities() {
+        const activities = JSON.parse(localStorage.getItem('activities')) || exampleActivities;
+        activitiesContainer.innerHTML = ''; // Limpiar el contenedor
+        adminActivitiesContainer.innerHTML = ''; // Limpiar el contenedor del panel de administración
+        activities.forEach(activity => {
+            addActivityToDOM(activity);
+            addActivityToAdminDOM(activity);
+        });
+    }
+
+    // Función para agregar actividad al DOM
+    function addActivityToDOM(activity) {
+        const newActivity = document.createElement('div');
+        newActivity.classList.add('activity');
+        newActivity.innerHTML = `
+            <h2>${activity.title}</h2>
+            <p>Fecha: ${activity.date}</p>
+            <p>Hora: ${activity.time}</p>
+            <p class="description">${activity.description}</p>
+        `;
+        activitiesContainer.appendChild(newActivity);
+    }
+
+    // Función para agregar actividad al DOM del panel de administración
+    function addActivityToAdminDOM(activity) {
+        const newActivity = document.createElement('div');
+        newActivity.classList.add('activity');
+        newActivity.innerHTML = `
+            <div>
+                <h2>${activity.title}</h2>
+                <p>Fecha: ${activity.date}</p>
+                <p>Hora: ${activity.time}</p>
+                <p class="description">${activity.description}</p>
+            </div>
+            <button class="deleteActivityButton">Eliminar</button>
+        `;
+        adminActivitiesContainer.appendChild(newActivity);
+        // Agregar evento para eliminar actividad
+        newActivity.querySelector('.deleteActivityButton').addEventListener('click', () => {
+            deleteActivity(activity.title);
+        });
+    }
+
+    // Función para agregar actividad
+    function addActivity() {
+        const title = document.getElementById('activityTitle').value;
+        const date = document.getElementById('activityDate').value;
+        const time = document.getElementById('activityTime').value;
+        const description = document.getElementById('activityDescription').value;
+        if (title && date && time && description) {
+            const activity = { title, date, time, description };
+            const activities = JSON.parse(localStorage.getItem('activities')) || [];
+            activities.push(activity);
+            localStorage.setItem('activities', JSON.stringify(activities));
+            addActivityToDOM(activity); // Agregar al DOM
+            addActivityToAdminDOM(activity); // Agregar al panel de administración
+            clearInputFields();
+        } else {
+            alert("Por favor, completa todos los campos.");
+        }
+    }
+
+    // Función para eliminar actividad
+    function deleteActivity(title) {
+        const activities = JSON.parse(localStorage.getItem('activities')) || [];
+        const updatedActivities = activities.filter(activity => activity.title !== title);
+        localStorage.setItem('activities', JSON.stringify(updatedActivities));
+        loadActivities(); // Recargar actividades
+    }
+
+    // Limpiar campos de entrada
+    function clearInputFields() {
+        document.getElementById('activityTitle').value = '';
+        document.getElementById('activityDate').value = '';
+        document.getElementById('activityTime').value = '';
+        document.getElementById('activityDescription').value = '';
+    }
+
+    // Función para mostrar el panel de administración
+    adminButton.addEventListener('click', () => {
+        const userPassword = prompt("Por favor, ingresa la contraseña:");
+        if (userPassword === password) {
+            adminPanel.style.display = 'block';
+            adminButton.style.display = 'none'; // Esconde el botón después de acceder
+        } else {
+            alert("Contraseña incorrecta.");
+        }
+    });
+
+    // Función para mostrar la lista de profesores
+    function mostrarProfesores() {
+        profesoresContainer.innerHTML = ''; // Limpiar el contenedor
+        profesores.forEach(profesor => {
+            const profesorDiv = document.createElement('div');
+            profesorDiv.classList.add('activity');
+            profesorDiv.innerHTML = `
+                <h2>${profesor.nombre}</h2>
+                <p>Materia: ${profesor.materia}</p>
+            `;
+            profesoresContainer.appendChild(profesorDiv);
+        });
+        profesoresContainer.style.display = 'block'; // Mostrar el contenedor de profesores
+        activitiesContainer.style.display = 'none'; // Ocultar contenedor de actividades
+        adminPanel.style.display = 'none'; // Ocultar panel de administración
+    }
+
+    // Agregar eventos a los botones
+    document.getElementById('addActivityButton').addEventListener('click', addActivity);
+    horarioButton.addEventListener('click', () => {
+        modal.style.display = 'block';
+    });
+    profesoresButton.addEventListener('click', mostrarProfesores);
+
+    // Cerrar el modal
+    closeModal.onclick = function() {
+        modal.style.display = 'none';
+    }
+
+    // Cerrar el modal si se hace clic fuera de él
+    window.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // Cargar actividades al iniciar
+    loadActivities();
+</script>
+</body>
+</html>
